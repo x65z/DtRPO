@@ -1,0 +1,23 @@
+{ 
+Dirge the Roleplaying Overhaul ---
+By x65
+Script to patch armor, weapon and etc. values.
+Very loosely based on the script by ThreeTen for RealShelter on Oldrim
+}
+
+unit DirgePatcher2;
+
+uses mteFunctions; 
+
+// called for every record selected in xEdit
+function Process(e: IInterface): integer;
+begin
+  //Result := 0;
+  addmessage(e)
+  // comment this out if you don't want those messages
+  //AddMessage('Processing: ' + FullPath(e));
+
+  // processing code goes here
+
+end;
+end.

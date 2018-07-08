@@ -1,0 +1,176 @@
+{ 
+Dirge the Roleplaying Overhaul ---
+By x65
+Script to patch armor, weapon and etc. values.
+Very loosely based on the script by ThreeTen for RealShelter on Oldrim
+}
+
+unit DirgePatcher;
+
+uses mteFunctions; 
+
+//Globals
+//These are the records that need to constantly referenced
+var
+    DirgeFile, DFDFile, CoTIndex, globalVariable : IInterface;
+	masters: TStringList;
+
+function findAllTheFiles: integer;
+  var
+    Form1, Form2, Form3, checkForm1 : IInterface;
+    a, ii: Integer;
+    s1: string;
+  begin
+	masters := TStringList.Create;	
+	 for a := 0 to (FileCount - 1) do begin
+		s1 := GetFileName(FileByIndex(a));
+		//AddMessage(inttostr(a));
+		//AddMessage(s1);
+		
+		if(s1 = 'Dirge for the Different.esp') then begin
+			AddMessage('--Do not load Dirge for the Different.esp, quitting!');
+			Result := -2;
+			Exit;
+			Exit;
+		end; 
+    end; //loop ends
+	///////////////////////////////////////////////////// Look for and delete if found DFD, either way create new one
+	if FileExists(DataPath + 'Dirge for the Different.esp') then begin
+		addmessage('--Found Dirge for the Different.esp');
+		if DeleteFile(DataPath + 'Dirge for the Different.esp') then begin
+			DeleteFile(DataPath + 'Dirge for the Different');
+			addmessage('--Deleted Dirge for the Different.esp');
+		end;
+	end;
+	//if not FileExists(DataPath + 'Dirge for the Different.esp') then begin
+	AddNewFileName('Dirge for the Different.esp');
+	addmessage('--Created new Dirge for the Different.esp');
+
+	////////////////////////////////////////////////////////////////////////////
+	
+	
+    CoTIndex := 0;
+    for a := 0 to (FileCount - 1) do 
+    begin
+      s1 := GetFileName(FileByIndex(a));
+      //s1 := Lowercase(s1);
+
+      if (s1 = 'Dirge.esp') then 
+      begin
+        DirgeFile := FileByIndex(a);
+		AddMessage('--Found Dirge.esp')
+        //RSFIndex := a;
+      end
+      else if(s1 = 'Dirge for the Different.esp') then 
+      begin
+        DFDFile := FileByIndex(a);
+		AddMessage('--Found new Dirge for the Different.esp')
+        //RSPFIndex := a;
+		end; 
+    end; //loop ends
+
+    //define important files
+    if not Assigned(DFDFile) and Assigned(DirgeFile) then begin
+      AddMessage('--Creating new Dirge for the Different.esp');
+      DFDFile := AddNewFileName('Dirge for the Different.esp');
+      seev(DFDFile, 'TES4/CNAM','Dirge for the Different - Please Do Not Modify This Text');
+      //RSPFIndex := GetLoadOrder(RSPFile)+1;
+    end;
+
+    if Assigned(DirgeFile) and Assigned(DFDFile) then begin
+	end else begin
+		AddMessage('--Missing .esp, quiting!');
+		Result := -1;
+		Exit;
+    end;
+    //ScriptProcessElements := [etFile];
+    Result := 0;	
+end;
+
+function Initialize: integer;
+begin
+	findAllTheFiles;
+	Result := 0;
+end;
+
+function Process(e: IInterface): //Main record processing
+integer; var RatingCalc: real; var  fullName, signature, Rating, atype, goldValue, shield: string;
+	begin
+	if GetFileName(e) <> 'Dirge for the Different.esp' then begin
+		if not StrEndsWith(GetFileName(e), '.dat') then begin
+			AddMastersToList(e, masters);
+			AddMastersToFile(DFDFile, masters, true);
+		end;
+		if IsWinningOverride(e) then begin
+			signature := GetElementEditValues(e, 'Record Header\Signature');  
+			if signature = 'ARMO' then
+				fullName := GetElementEditValues(e, 'FULL');
+				if fullName <> '' then begin
+					atype := GetElementEditValues(e, 'BOD2\Armor Type');  				
+					Rating := GetElementEditValues(e, 'DNAM'); 
+					//addmessage(fullname + ' ar: ' + Rating);
+					RatingCalc := strtofloat(Rating);
+					if RatingCalc <> 0 then begin
+						//addmessage(Rating + ' vs ' + floatTostr(RatingCalc)); //debug
+						shield := GetElementEditValues(e, 'Record Header\Record Flags\Shield');  //0000001
+						//addmessage(fullname + ' ssshield: ' + shield);
+						if atype = 'Heavy Armor' then begin				
+							//AddMessage('Heavy: ' + fullName); //debug
+							//AddRequiredElementMasters(e, DFDFile, False); //Add to Dirge for the Different as Override
+							//AddMastersToFile(DFDFile, fullName, False);
+							wbCopyElementToFile(e, DFDFile, False, True);
+							if Shield = '1' then begin
+								seev(WinningOverride(e), 'DNAM', floattostr(Rating * 3)); 
+							end else begin
+								seev(WinningOverride(e), 'DNAM', floattostr(Rating * 6)); 
+							end;
+							//AddRequiredElementMasters(globalVariable, DFDFile,false);
+							//wbCopyElementToFile(globalVariable, DFDFile, false,true);
+						end else if atype = 'Light Armor' then begin	
+							//AddMessage('Light: ' + fullName);
+							//AddRequiredElementMasters(e, DFDFile, False); //Add to Dirge for the Different as Override
+							//AddMastersToFile(DFDFile, fullName, False);
+							wbCopyElementToFile(e, DFDFile, False, True);
+							if Shield = '1' then begin
+								seev(WinningOverride(e), 'DNAM', floattostr(Rating * 2)); 
+							end else begin
+								seev(WinningOverride(e), 'DNAM', floattostr(Rating * 2)); 
+							end;
+						end else if atype = 'Clothing' then begin	
+							//AddMessage('Clothing: ' + fullName); //debug, do nothing for now
+						end
+					end;
+				end else if signature = 'WEAP' then begin
+
+					fullName := GetElementEditValues(e, 'FULL');
+					if fullName <> '' then begin
+						atype := GetElementEditValues(e, 'DNAM\Animation Type');  
+						Rating := GetElementEditValues(e, 'DATA\Damage'); 
+						//addmessage(fullname + ' rating: ' + Rating);
+						RatingCalc := strtofloat(Rating);
+						if RatingCalc <> 0 then begin
+							//addmessage(atype);
+							if atype = 'Bow' then begin
+								//addmessage('Found bow: ' + fullName);
+								wbCopyElementToFile(e, DFDFile, False, True);
+								seev(WinningOverride(e), 'DATA\Damage', floattostr(Rating * 6)); 
+							end else begin
+								AddMastersToList(e, masters);
+								wbCopyElementToFile(e, DFDFile, False, True);
+								seev(WinningOverride(e), 'DATA\Damage', floattostr(Rating * 6)); 
+							end;
+						end;
+					end;
+				end;			
+			end;
+		end;
+	end;  
+	
+function Finalize: integer;
+begin
+	 CleanMasters(DFDFile);
+	Result := 0;
+end;
+	
+	
+end.
